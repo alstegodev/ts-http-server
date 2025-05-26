@@ -23,12 +23,14 @@
   },
   "homepage": "https://github.com/alstegodev/ts-http-server#readme",
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "drizzle-kit": "^0.31.1",
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "drizzle-orm": "^0.43.1",
     "express": "^5.1.0",
     "postgres": "^3.4.7"

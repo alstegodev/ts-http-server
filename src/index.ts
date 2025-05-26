@@ -1,7 +1,8 @@
 import express, {NextFunction, Request, Response} from "express";
 import {API_CONFIG} from "./config.js";
-import {clearUsers, createUser} from "./db/queries/user.js";
+import {clearUsers, createUser, getUser, UserResponse} from "./db/queries/user.js";
 import {createChirp, getChirps, getSingleChirp} from "./db/queries/chirp.js";
+import {checkPasswordHash, hashPassword} from "./auth.js";
 
 const app = express();
 const PORT = 8080;
@@ -32,9 +33,12 @@ app.post("/api/validate_chirp", (req, res) => {
 })
 
 app.post("/api/users", async (req, res) => {
-    const user: {email: string} = req.body
+    const user: { email: string, password: string } = req.body
 
-    const dbResponse = await createUser(user)
+    const dbResponse: UserResponse = await createUser({
+        email: user.email,
+        hashedPassword: await hashPassword(user.password),
+    }) ;
     const responseBody = JSON.stringify(dbResponse)
 
     res.header('Content-Type', 'application/json')
@@ -42,10 +46,38 @@ app.post("/api/users", async (req, res) => {
     res.end()
 })
 
-app.post("/api/chirps", async (req, res) => {
-    const chirp: {body: string, userId: string} = req.body
+app.post("/api/login", async (req, res) => {
+    const loginBody: { password: string, email: string } = req.body
 
-    if(chirp.body.length > 140) {
+    const user = await getUser(loginBody.email)
+
+    if (user === undefined) {
+        res.status(401).send("Unauthorized")
+        return
+    }
+
+    if (await checkPasswordHash(loginBody.password, user.hashedPassword)) {
+        const userResponse: UserResponse = {
+            id: user.id,
+            email: user.email,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        }
+        const responseBody = JSON.stringify(userResponse)
+
+        res.header('Content-Type', 'application/json')
+        res.status(200).send(responseBody);
+        res.end()
+    } else {
+        res.status(401).send("Unauthorized")
+        return
+    }
+})
+
+app.post("/api/chirps", async (req, res) => {
+    const chirp: { body: string, userId: string } = req.body
+
+    if (chirp.body.length > 140) {
         res.status(400).send("Chirp is too long")
     } else {
         const dbResponse = await createChirp(chirp)
@@ -67,7 +99,7 @@ app.get("/api/chirps", async (req, res) => {
 
 app.get("/api/chirps/:id", async (req, res) => {
     const dbResponse = await getSingleChirp(req.params.id)
-    if(dbResponse === undefined) {
+    if (dbResponse === undefined) {
         res.status(404).send("Not found")
         return
     }
@@ -87,7 +119,7 @@ app.get("/admin/metrics", (req, res) => {
 });
 
 app.post("/admin/reset", (req, res) => {
-    if(API_CONFIG.platform !== "dev") {
+    if (API_CONFIG.platform !== "dev") {
         res.status(403).send("Forbidden");
     } else {
         API_CONFIG.fileserverHits = 0;

@@ -5,6 +5,6 @@ export default defineConfig({
     out: "src/db/migrations",
     dialect: "postgresql",
     dbCredentials: {
-        url: "postgres://postgres:postgres@localhost:5432/chirpy"
+        url: process.env.DB_URL,
     }
 })
