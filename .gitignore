@@ -3,4 +3,5 @@ dist
 node_modules
 .env
 server.log
-src/db/schema-generated.ts
+src/db/migrations
+drizzle.config.ts

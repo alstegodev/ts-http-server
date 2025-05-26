@@ -1,5 +1,7 @@
 import express, {NextFunction, Request, Response} from "express";
 import {API_CONFIG} from "./config.js";
+import {clearUsers, createUser} from "./db/queries/user.js";
+import {createChirp, getChirps, getSingleChirp} from "./db/queries/chirp.js";
 
 const app = express();
 const PORT = 8080;
@@ -29,6 +31,51 @@ app.post("/api/validate_chirp", (req, res) => {
 
 })
 
+app.post("/api/users", async (req, res) => {
+    const user: {email: string} = req.body
+
+    const dbResponse = await createUser(user)
+    const responseBody = JSON.stringify(dbResponse)
+
+    res.header('Content-Type', 'application/json')
+    res.status(200).send(responseBody);
+    res.end()
+})
+
+app.post("/api/chirps", async (req, res) => {
+    const chirp: {body: string, userId: string} = req.body
+
+    if(chirp.body.length > 140) {
+        res.status(400).send("Chirp is too long")
+    } else {
+        const dbResponse = await createChirp(chirp)
+        const responseBody = JSON.stringify(dbResponse)
+        res.header('Content-Type', 'application/json')
+        res.status(201).send(responseBody);
+        res.end()
+    }
+
+
+})
+
+app.get("/api/chirps", async (req, res) => {
+    const dbResponse = await getChirps()
+    const responseBody = JSON.stringify(dbResponse)
+    res.header('Content-Type', 'application/json')
+    res.status(200).send(responseBody);
+})
+
+app.get("/api/chirps/:id", async (req, res) => {
+    const dbResponse = await getSingleChirp(req.params.id)
+    if(dbResponse === undefined) {
+        res.status(404).send("Not found")
+        return
+    }
+    const responseBody = JSON.stringify(dbResponse)
+    res.header('Content-Type', 'application/json')
+    res.status(200).send(responseBody);
+})
+
 app.get("/admin/metrics", (req, res) => {
     res.set("Content-Type", "text/html; charset=utf-8");
     res.send(`<html>
@@ -40,8 +87,14 @@ app.get("/admin/metrics", (req, res) => {
 });
 
 app.post("/admin/reset", (req, res) => {
-    API_CONFIG.fileserverHits = 0;
-    res.send("OK");
+    if(API_CONFIG.platform !== "dev") {
+        res.status(403).send("Forbidden");
+    } else {
+        API_CONFIG.fileserverHits = 0;
+        clearUsers();
+        res.send("OK");
+    }
+
 });
 
 app.use(middlewareErrorHandling)

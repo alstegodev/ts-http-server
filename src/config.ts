@@ -1,15 +1,14 @@
-import * as process from "node:process";
 
 process.loadEnvFile()
 
 type APIConfig = {
     fileserverHits: number;
-    dbURL: string;
+    platform: string;
 }
 
 export const API_CONFIG: APIConfig = {
     fileserverHits: 0,
-    dbURL: envOrThrow("DB_URL"),
+    platform: envOrThrow("PLATFORM"),
 }
 
 function envOrThrow(key: string) {
